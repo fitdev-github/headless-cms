@@ -1,0 +1,11 @@
+# HeadlessCMS root .htaccess
+# Use this when DocumentRoot points to the project root (not /public)
+# For shared hosting that can't change DocumentRoot.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Redirect everything to /public
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ /public/$1 [L,QSA]
+</IfModule>
