@@ -28,8 +28,8 @@ class WebhookController extends Controller
             'events'     => ['required', 'array', 'min:1'],
             'events.*'   => ['string'],
             'headers'    => ['nullable', 'array'],
-            'headers.*.key'   => ['nullable', 'string', 'max:100'],
-            'headers.*.value' => ['nullable', 'string', 'max:500'],
+            'headers.*.key'   => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\-_]+$/'],
+            'headers.*.value' => ['nullable', 'string', 'max:500', 'regex:/^[^\r\n]*$/'],
         ]);
 
         // Remove blank header rows
@@ -65,8 +65,8 @@ class WebhookController extends Controller
             'events'     => ['required', 'array', 'min:1'],
             'events.*'   => ['string'],
             'headers'    => ['nullable', 'array'],
-            'headers.*.key'   => ['nullable', 'string', 'max:100'],
-            'headers.*.value' => ['nullable', 'string', 'max:500'],
+            'headers.*.key'   => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\-_]+$/'],
+            'headers.*.value' => ['nullable', 'string', 'max:500', 'regex:/^[^\r\n]*$/'],
         ]);
 
         $headers = collect($data['headers'] ?? [])

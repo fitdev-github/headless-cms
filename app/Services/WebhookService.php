@@ -13,7 +13,7 @@ class WebhookService
 
     public function __construct()
     {
-        $this->client = new Client(['timeout' => 10, 'verify' => false]);
+        $this->client = new Client(['timeout' => 10, 'verify' => !app()->isLocal()]);
     }
 
     /**

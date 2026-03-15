@@ -48,7 +48,7 @@ class MediaController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'file'   => ['required', 'file', 'max:20480'], // 20MB
+            'file'   => ['required', 'file', 'max:20480', 'mimes:jpg,jpeg,png,gif,webp,svg,avif,pdf,doc,docx,xls,xlsx,csv,txt,mp4,mov,avi,mp3,wav,zip,rar'], // 20MB
             'alt'    => ['nullable', 'string', 'max:255'],
             'folder' => ['nullable', 'string', 'max:100'],
         ]);

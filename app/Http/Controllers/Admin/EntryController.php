@@ -163,8 +163,7 @@ class EntryController extends Controller
                 ->where('id', '!=', $entry->id)
                 ->select('id', 'locale', 'status')
                 ->get()
-                ->keyBy('locale')
-                ->toArray();
+                ->keyBy('locale');
         }
 
         return view('admin.entries.edit', compact(

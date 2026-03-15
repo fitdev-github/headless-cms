@@ -21,7 +21,7 @@ class ApiTokenAuth
         if ($slug === 'upload') {
             return match ($method) {
                 'GET'    => $id ? 'upload.findOne' : 'upload.find',
-                'POST'   => 'upload.create',
+                'POST'   => 'upload.upload',
                 'DELETE' => 'upload.delete',
                 default  => 'upload.find',
             };
