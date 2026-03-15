@@ -9,10 +9,15 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
-        .sidebar-link { @apply flex items-center gap-2.5 px-3 py-1.5 text-sm rounded-md transition-colors; }
-        .sidebar-link:hover { @apply bg-white/10 text-white; }
-        .sidebar-link.active { @apply bg-white/20 text-white font-medium; }
-        .sidebar-link.inactive { @apply text-blue-200; }
+        .sidebar-link {
+            display: flex; align-items: center; gap: 0.625rem;
+            padding: 0.375rem 0.75rem; font-size: 0.875rem; line-height: 1.25rem;
+            border-radius: 0.375rem; transition: background-color 0.15s, color 0.15s;
+            text-decoration: none; color: #bfdbfe; /* blue-200 */
+        }
+        .sidebar-link:hover { background-color: rgba(255,255,255,0.1); color: #fff; }
+        .sidebar-link.active { background-color: rgba(255,255,255,0.2); color: #fff; font-weight: 500; }
+        .sidebar-link.inactive { color: #bfdbfe; } /* blue-200 */
     </style>
     @stack('head')
 </head>
@@ -102,8 +107,29 @@
                     </svg>
                     Content-Type Builder
                 </a>
+                <a href="{{ route('admin.components.index') }}"
+                    class="sidebar-link {{ request()->routeIs('admin.components.*') ? 'active' : 'inactive' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    Components
+                </a>
+                <a href="{{ route('admin.up.roles') }}"
+                    class="sidebar-link {{ request()->routeIs('admin.up.*') ? 'active' : 'inactive' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    Users & Permissions
+                </a>
+                <a href="{{ route('admin.webhooks.index') }}"
+                    class="sidebar-link {{ request()->routeIs('admin.webhooks.*') ? 'active' : 'inactive' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Webhooks
+                </a>
                 <a href="{{ route('admin.settings.global') }}"
-                    class="sidebar-link {{ request()->routeIs('admin.settings.*') ? 'active' : 'inactive' }}">
+                    class="sidebar-link {{ request()->routeIs('admin.settings.*') || request()->routeIs('admin.tokens.*') || request()->routeIs('admin.users*') ? 'active' : 'inactive' }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>

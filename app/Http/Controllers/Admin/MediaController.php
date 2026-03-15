@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Media;
+use App\Services\WebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
+    public function __construct(protected WebhookService $webhookService) {}
+
     public function index(Request $request)
     {
         $query = Media::orderByDesc('created_at');
@@ -79,6 +82,8 @@ class MediaController extends Controller
             'folder'        => $folder,
         ]);
 
+        $this->webhookService->dispatch('media.create', WebhookService::mediaPayload('media.create', $media->toApiArray()));
+
         return response()->json($media->toApiArray());
     }
 
@@ -95,8 +100,12 @@ class MediaController extends Controller
     public function destroy(int $id)
     {
         $media = Media::findOrFail($id);
+        $mediaData = $media->toApiArray();
         Storage::disk('public')->delete($media->path);
         $media->forceDelete();
+
+        $this->webhookService->dispatch('media.delete', WebhookService::mediaPayload('media.delete', $mediaData));
+
         return response()->json(['ok' => true]);
     }
 }

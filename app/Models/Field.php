@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class Field extends Model
 {
     protected $fillable = [
-        'content_type_id', 'name', 'display_name', 'type', 'options', 'sort_order',
+        'content_type_id', 'name', 'display_name', 'type', 'options', 'localizable', 'sort_order',
     ];
 
-    protected $casts = ['options' => 'array'];
+    protected $casts = [
+        'options'     => 'array',
+        'localizable' => 'boolean',
+    ];
 
     public function contentType()
     {
@@ -32,6 +35,12 @@ class Field extends Model
         return (bool) ($this->options['private'] ?? false);
     }
 
+    public function isLocalizable(): bool
+    {
+        // NULL means not yet set — default to true (localizable by default)
+        return $this->localizable !== false;
+    }
+
     public function getOption(string $key, $default = null)
     {
         return $this->options[$key] ?? $default;
@@ -46,11 +55,11 @@ class Field extends Model
     public function getValueColumn(): string
     {
         return match ($this->type) {
-            'number'                    => 'value_number',
-            'boolean'                   => 'value_boolean',
-            'date', 'datetime'          => 'value_date',
-            'media', 'relation', 'json' => 'value_json',
-            default                     => 'value_text',
+            'number'                                                       => 'value_number',
+            'boolean'                                                      => 'value_boolean',
+            'date', 'datetime'                                             => 'value_date',
+            'media', 'relation', 'json', 'component', 'dynamiczone'       => 'value_json',
+            default                                                        => 'value_text',
         };
     }
 }

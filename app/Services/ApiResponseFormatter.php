@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Component;
 use App\Models\ContentType;
 use App\Models\Entry;
 use App\Models\Field;
@@ -30,6 +31,11 @@ class ApiResponseFormatter
             'publishedAt' => $entry->published_at?->toISOString(),
         ];
 
+        // Include locale for localized content
+        if ($entry->locale) {
+            $attributes['locale'] = $entry->locale;
+        }
+
         foreach ($fields as $field) {
             /** @var Field $field */
             if ($field->isPrivate() || $field->type === 'password') continue;
@@ -45,6 +51,10 @@ class ApiResponseFormatter
                 $attributes[$field->name] = $doPopulate
                     ? $this->formatRelationValue($value, $field)
                     : ['data' => null];
+            } elseif ($field->type === 'component') {
+                $attributes[$field->name] = $this->formatComponentValue($value, $field);
+            } elseif ($field->type === 'dynamiczone') {
+                $attributes[$field->name] = $this->formatDynamicZoneValue($value);
             } else {
                 $attributes[$field->name] = $value;
             }
@@ -110,6 +120,48 @@ class ApiResponseFormatter
             'createdAt'       => $m->created_at?->toISOString(),
             'updatedAt'       => $m->updated_at?->toISOString(),
         ];
+    }
+
+    private function formatComponentValue($value, Field $field): mixed
+    {
+        if ($value === null) return null;
+
+        $repeatable  = (bool) $field->getOption('repeatable', false);
+        $componentId = (int) $field->getOption('component_id');
+        $component   = Component::find($componentId);
+        $compName    = $component ? $component->name : 'unknown';
+
+        if (!$repeatable) {
+            // Non-repeatable: value = ['fieldName' => ..., ...]
+            if (!is_array($value)) return null;
+            return array_merge(['id' => null, '__component' => $compName], $value);
+        }
+
+        // Repeatable: value = [{_key, componentId, fields: {...}}, ...]
+        if (!is_array($value)) return [];
+        return array_values(array_filter(array_map(function ($item) use ($compName) {
+            if (!is_array($item)) return null;
+            $fields = $item['fields'] ?? [];
+            return array_merge(['id' => null, '__component' => $compName], $fields);
+        }, $value)));
+    }
+
+    private function formatDynamicZoneValue($value): array
+    {
+        if (!is_array($value)) return [];
+        // Cache component names to avoid N+1 queries
+        static $compCache = [];
+        return array_values(array_filter(array_map(function ($item) use (&$compCache) {
+            if (!is_array($item)) return null;
+            $cid     = (int) ($item['componentId'] ?? 0);
+            $fields  = $item['fields'] ?? [];
+            if ($cid && !isset($compCache[$cid])) {
+                $comp = Component::find($cid);
+                $compCache[$cid] = $comp ? $comp->name : 'unknown';
+            }
+            $compName = $item['__component'] ?? ($compCache[$cid] ?? 'unknown');
+            return array_merge(['id' => null, '__component' => $compName], $fields);
+        }, $value)));
     }
 
     private function formatRelationValue($value, Field $field): array

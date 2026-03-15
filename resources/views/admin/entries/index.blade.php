@@ -21,18 +21,39 @@
         </a>
     </div>
 
-    {{-- Filters --}}
+    {{-- Locale Tabs (i18n) --}}
+    @if($ct->localized && !empty($locales))
+    <div class="flex items-center gap-1 mb-4 pb-3 border-b border-gray-100">
+        <span class="text-xs font-medium text-gray-400 mr-2">🌐 Locale:</span>
+        <a href="{{ route('admin.cm.index', $ct->plural_name) }}?locale=all"
+            class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors {{ ($currentLocale ?? '') === 'all' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100' }}">
+            All
+        </a>
+        @foreach($locales as $loc)
+        <a href="{{ route('admin.cm.index', $ct->plural_name) }}?locale={{ $loc }}"
+            class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors {{ ($currentLocale ?? $defaultLocale ?? 'en') === $loc ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100' }}">
+            {{ strtoupper($loc) }}
+            @if($loc === ($defaultLocale ?? 'en'))
+                <span class="text-gray-400">(default)</span>
+            @endif
+        </a>
+        @endforeach
+    </div>
+    @endif
+
+    {{-- Status Filters --}}
     @if($ct->draft_publish)
     <div class="flex items-center gap-2 mb-4">
-        <a href="{{ route('admin.cm.index', $ct->plural_name) }}"
+        @php $localeParam = ($currentLocale ?? '') !== '' ? '&locale='.($currentLocale ?? '') : ''; @endphp
+        <a href="{{ route('admin.cm.index', $ct->plural_name) }}?{{ $localeParam }}"
             class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors {{ !request('status') ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100' }}">
             All
         </a>
-        <a href="{{ route('admin.cm.index', $ct->plural_name) }}?status=published"
+        <a href="{{ route('admin.cm.index', $ct->plural_name) }}?status=published{{ $localeParam }}"
             class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors {{ request('status') === 'published' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-100' }}">
             Published
         </a>
-        <a href="{{ route('admin.cm.index', $ct->plural_name) }}?status=draft"
+        <a href="{{ route('admin.cm.index', $ct->plural_name) }}?status=draft{{ $localeParam }}"
             class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors {{ request('status') === 'draft' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-500 hover:bg-gray-100' }}">
             Draft
         </a>
@@ -56,6 +77,9 @@
                         <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {{ $titleField ? $titleField->display_name : 'Entry' }}
                         </th>
+                        @if($ct->localized)
+                        <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Locale</th>
+                        @endif
                         @if($ct->draft_publish)
                         <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         @endif
@@ -74,6 +98,13 @@
                                 {{ isset($titleValues[$entry->id]) ? \Illuminate\Support\Str::limit(strip_tags($titleValues[$entry->id]), 60) : 'Entry #'.$entry->id }}
                             </a>
                         </td>
+                        @if($ct->localized)
+                        <td class="px-5 py-3">
+                            <span class="px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700 rounded uppercase">
+                                {{ $entry->locale ?? '—' }}
+                            </span>
+                        </td>
+                        @endif
                         @if($ct->draft_publish)
                         <td class="px-5 py-3">
                             <span class="text-xs px-2 py-0.5 rounded-full font-medium

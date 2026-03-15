@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ContentType;
 use App\Models\Entry;
+use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -25,6 +26,9 @@ class ApiQueryBuilder
             $query->where('status', 'published');
         }
 
+        // i18n locale filter
+        $this->applyLocale($query, $ct, $request->input('locale'));
+
         // Filters
         $filters = $request->input('filters', []);
         if (!empty($filters)) {
@@ -40,6 +44,18 @@ class ApiQueryBuilder
         }
 
         return $query;
+    }
+
+    /**
+     * Apply locale filtering for localized content types.
+     * ?locale=all → no filter; ?locale=th → filter by 'th'; no param → default locale.
+     */
+    public function applyLocale(Builder $query, ContentType $ct, ?string $locale): void
+    {
+        if (!$ct->localized) return;
+        if ($locale === 'all') return;
+        $resolved = $locale ?: Setting::get('default_locale', 'en');
+        $query->where('locale', $resolved);
     }
 
     public function paginate(Builder $query, Request $request): array

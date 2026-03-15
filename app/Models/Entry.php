@@ -9,7 +9,7 @@ class Entry extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['content_type_id', 'status', 'created_by', 'published_at'];
+    protected $fillable = ['content_type_id', 'status', 'created_by', 'published_at', 'locale', 'locale_group_id'];
 
     protected $casts = ['published_at' => 'datetime'];
 

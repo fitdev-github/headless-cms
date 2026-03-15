@@ -74,12 +74,20 @@
                         class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ old('description', $contentType->description ?? '') }}</textarea>
                 </div>
 
-                <div class="mb-4 flex items-center gap-2">
+                <div class="mb-3 flex items-center gap-2">
                     <input type="hidden" name="draft_publish" value="0">
                     <input type="checkbox" name="draft_publish" id="draft_publish" value="1"
                         {{ old('draft_publish', $contentType->draft_publish ?? true) ? 'checked' : '' }}
                         class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                     <label for="draft_publish" class="text-xs text-gray-600">Enable Draft/Publish system</label>
+                </div>
+
+                <div class="mb-4 flex items-center gap-2">
+                    <input type="hidden" name="localized" value="0">
+                    <input type="checkbox" name="localized" id="localized" value="1"
+                        {{ old('localized', $contentType->localized ?? false) ? 'checked' : '' }}
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <label for="localized" class="text-xs text-gray-600">Enable Internationalization (i18n)</label>
                 </div>
 
                 <button type="submit"
@@ -181,20 +189,22 @@
                                 <p class="text-xs font-medium text-gray-600 mb-3">Select a field type</p>
                                 <div class="grid grid-cols-3 gap-2">
                                     @foreach([
-                                        ['text',        'Text',        '✏️'],
-                                        ['textarea',    'Long Text',   '📝'],
-                                        ['richtext',    'Rich Text',   '📄'],
-                                        ['number',      'Number',      '🔢'],
-                                        ['boolean',     'Boolean',     '☑️'],
-                                        ['date',        'Date',        '📅'],
-                                        ['datetime',    'DateTime',    '🕐'],
-                                        ['email',       'Email',       '📧'],
-                                        ['password',    'Password',    '🔑'],
-                                        ['enumeration', 'Enumeration', '📋'],
-                                        ['uid',         'UID',         '🔗'],
-                                        ['media',       'Media',       '🖼️'],
-                                        ['json',        'JSON',        '{}'],
-                                        ['relation',    'Relation',    '↔️'],
+                                        ['text',        'Text',         '✏️'],
+                                        ['textarea',    'Long Text',    '📝'],
+                                        ['richtext',    'Rich Text',    '📄'],
+                                        ['number',      'Number',       '🔢'],
+                                        ['boolean',     'Boolean',      '☑️'],
+                                        ['date',        'Date',         '📅'],
+                                        ['datetime',    'DateTime',     '🕐'],
+                                        ['email',       'Email',        '📧'],
+                                        ['password',    'Password',     '🔑'],
+                                        ['enumeration', 'Enumeration',  '📋'],
+                                        ['uid',         'UID',          '🔗'],
+                                        ['media',       'Media',        '🖼️'],
+                                        ['json',        'JSON',         '{}'],
+                                        ['relation',    'Relation',     '↔️'],
+                                        ['component',   'Component',    '🧩'],
+                                        ['dynamiczone', 'Dynamic Zone', '⚡'],
                                     ] as [$type, $label, $icon])
                                     <button @click="selectedType = '{{ $type }}'"
                                         class="flex flex-col items-center gap-1.5 p-3 border border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-colors text-sm">
@@ -325,6 +335,52 @@
                                             </label>
                                         </div>
                                     </template>
+
+                                    <template x-if="selectedType === 'component'">
+                                        <div class="space-y-2">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 mb-1">Component *</label>
+                                                <select x-model.number="form.options.component_id"
+                                                    class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <option value="">— Select component —</option>
+                                                    @foreach(\App\Models\Component::orderBy('category')->orderBy('display_name')->get() as $comp)
+                                                    <option value="{{ $comp->id }}">{{ $comp->display_name }} <span class="text-gray-400">({{ $comp->name }})</span></option>
+                                                    @endforeach
+                                                </select>
+                                                @if(\App\Models\Component::count() === 0)
+                                                <p class="text-xs text-amber-600 mt-1">No components yet. <a href="{{ route('admin.components.create') }}" target="_blank" class="underline">Create one →</a></p>
+                                                @endif
+                                            </div>
+                                            <label class="flex items-center gap-2 text-xs text-gray-600">
+                                                <input type="checkbox" x-model="form.options.repeatable" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                                Repeatable (allow multiple instances)
+                                            </label>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="selectedType === 'dynamiczone'">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 mb-2">Allowed Components *</label>
+                                            @php $allComps = \App\Models\Component::orderBy('category')->orderBy('display_name')->get(); @endphp
+                                            @if($allComps->isEmpty())
+                                            <p class="text-xs text-amber-600 p-2 bg-amber-50 rounded">No components yet. <a href="{{ route('admin.components.create') }}" target="_blank" class="underline">Create components first →</a></p>
+                                            @else
+                                            <div class="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                                                @foreach($allComps as $comp)
+                                                <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded"
+                                                    @click.prevent="toggleDzComp({{ $comp->id }})">
+                                                    <span :class="(form.options.allowed_component_ids||[]).includes({{ $comp->id }}) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'"
+                                                          class="w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0">
+                                                        <svg x-show="(form.options.allowed_component_ids||[]).includes({{ $comp->id }})" class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                                    </span>
+                                                    <span class="font-medium">{{ $comp->display_name }}</span>
+                                                    <code class="text-gray-400">{{ $comp->name }}</code>
+                                                </label>
+                                                @endforeach
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </template>
                                 </div>
 
                                 <div class="flex gap-2">
@@ -369,6 +425,13 @@ function fieldBuilder(initialFields, contentTypeId) {
         editingField: null,
         enumValuesText: '',
         form: { name: '', display_name: '', options: {} },
+
+        toggleDzComp(id) {
+            if (!this.form.options.allowed_component_ids) this.form.options.allowed_component_ids = [];
+            const idx = this.form.options.allowed_component_ids.indexOf(id);
+            if (idx >= 0) this.form.options.allowed_component_ids.splice(idx, 1);
+            else this.form.options.allowed_component_ids.push(id);
+        },
 
         editField(field) {
             this.editingField = field;

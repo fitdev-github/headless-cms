@@ -43,6 +43,7 @@ class ContentTypeController extends Controller
             'description'   => $data['description'] ?? null,
             'icon'          => $data['icon'] ?? null,
             'draft_publish' => $request->boolean('draft_publish', true),
+            'localized'     => $request->boolean('localized', false),
             'sort_order'    => ContentType::max('sort_order') + 1,
         ]);
 
@@ -73,6 +74,7 @@ class ContentTypeController extends Controller
             'description'   => $data['description'] ?? null,
             'icon'          => $data['icon'] ?? null,
             'draft_publish' => $request->boolean('draft_publish', true),
+            'localized'     => $request->boolean('localized', false),
         ]);
 
         return back()->with('success', 'Content type updated.');

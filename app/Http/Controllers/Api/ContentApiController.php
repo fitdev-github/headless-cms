@@ -58,16 +58,18 @@ class ContentApiController extends Controller
         }
 
         if ($ct->isSingle()) {
-            $entry = Entry::where('content_type_id', $ct->id)
-                ->where('status', 'published')
-                ->first();
+            $query = Entry::where('content_type_id', $ct->id)
+                ->where('status', 'published');
+            $this->queryBuilder->applyLocale($query, $ct, $request->input('locale'));
+            $entry = $query->first();
             if (!$entry) {
                 return response()->json(['data' => null]);
             }
         } else {
-            $entry = Entry::where('content_type_id', $ct->id)
-                ->where('status', 'published')
-                ->find($id);
+            $query = Entry::where('content_type_id', $ct->id)
+                ->where('status', 'published');
+            $this->queryBuilder->applyLocale($query, $ct, $request->input('locale'));
+            $entry = $query->find($id);
             if (!$entry) {
                 return $this->formatter->error('entry.notFound', "Entry not found.", 404);
             }

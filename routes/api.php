@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ContentApiController;
 use App\Http\Controllers\Api\UploadApiController;
 use Illuminate\Support\Facades\Route;
@@ -8,6 +9,14 @@ use Illuminate\Support\Facades\Route;
 Route::options('{any}', function () {
     return response('', 200);
 })->where('any', '.*');
+
+// ── Auth endpoints (no token required) ───────────────────────────────────────
+Route::middleware(['installed', 'cors'])->group(function () {
+    Route::post('auth/local',          [AuthController::class, 'login']);
+    Route::post('auth/local/register', [AuthController::class, 'register']);
+    Route::get('users/me',             [AuthController::class, 'me'])->middleware('api.token');
+    Route::put('users/me',             [AuthController::class, 'updateMe'])->middleware('api.token');
+});
 
 // All API routes require installation + valid Bearer token + CORS headers
 Route::middleware(['installed', 'api.token', 'cors'])->prefix('v1')->group(function () {

@@ -11,10 +11,13 @@ class ContentType extends Model
 
     protected $fillable = [
         'display_name', 'singular_name', 'plural_name',
-        'type', 'description', 'icon', 'draft_publish', 'sort_order',
+        'type', 'description', 'icon', 'draft_publish', 'localized', 'sort_order',
     ];
 
-    protected $casts = ['draft_publish' => 'boolean'];
+    protected $casts = [
+        'draft_publish' => 'boolean',
+        'localized'     => 'boolean',
+    ];
 
     public function fields()
     {

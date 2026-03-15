@@ -112,7 +112,7 @@
         @click.self="detail = null">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <h3 class="font-semibold text-gray-900 text-sm truncate" x-text="detail && detail.attributes.name"></h3>
+                <h3 class="font-semibold text-gray-900 text-sm truncate" x-text="detail && detail.name"></h3>
                 <button @click="detail = null" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -120,29 +120,29 @@
             <template x-if="detail">
                 <div class="p-5">
                     <div class="aspect-video bg-gray-100 rounded-xl overflow-hidden mb-4 flex items-center justify-center">
-                        <template x-if="detail.attributes.mime && detail.attributes.mime.startsWith('image/')">
-                            <img :src="detail.attributes.url" class="max-w-full max-h-full object-contain">
+                        <template x-if="detail.mime && detail.mime.startsWith('image/')">
+                            <img :src="detail.url" class="max-w-full max-h-full object-contain">
                         </template>
-                        <template x-if="!(detail.attributes.mime && detail.attributes.mime.startsWith('image/'))">
+                        <template x-if="!(detail.mime && detail.mime.startsWith('image/'))">
                             <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                         </template>
                     </div>
                     <div class="space-y-2 text-sm">
-                        <div class="flex gap-3"><span class="text-gray-400 w-20 flex-shrink-0">URL</span><a :href="detail.attributes.url" target="_blank" class="text-blue-600 hover:underline truncate flex-1" x-text="detail.attributes.url"></a></div>
-                        <div class="flex gap-3"><span class="text-gray-400 w-20 flex-shrink-0">Size</span><span x-text="detail.attributes.size"></span></div>
-                        <template x-if="detail.attributes.width">
-                            <div class="flex gap-3"><span class="text-gray-400 w-20 flex-shrink-0">Dimensions</span><span x-text="detail.attributes.width + ' × ' + detail.attributes.height + ' px'"></span></div>
+                        <div class="flex gap-3"><span class="text-gray-400 w-20 flex-shrink-0">URL</span><a :href="detail.url" target="_blank" class="text-blue-600 hover:underline truncate flex-1" x-text="detail.url"></a></div>
+                        <div class="flex gap-3"><span class="text-gray-400 w-20 flex-shrink-0">Size</span><span x-text="detail.size"></span></div>
+                        <template x-if="detail.width">
+                            <div class="flex gap-3"><span class="text-gray-400 w-20 flex-shrink-0">Dimensions</span><span x-text="detail.width + ' × ' + detail.height + ' px'"></span></div>
                         </template>
                     </div>
                     <div class="mt-3">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Alt text</label>
-                        <input type="text" x-model="detail.attributes.alternativeText" @change="updateAlt(detail)"
+                        <input type="text" x-model="detail.alt" @change="updateAlt(detail)"
                             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div class="flex gap-2 mt-4">
-                        <a :href="detail.attributes.url" target="_blank"
+                        <a :href="detail.url" target="_blank"
                             class="flex-1 py-2 text-sm font-medium text-center border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                             Open file
                         </a>
@@ -188,16 +188,16 @@ function mediaLibrary(picker) {
         },
 
         openDetail(media) {
-            this.detail = { id: media.id, attributes: media.attributes };
+            this.detail = media;
         },
 
         selectMedia(media) {
             // Emit to parent window (for picker mode in iframe/popup)
             if (window.opener) {
-                window.opener.postMessage({ type: 'media-selected', media }, '*');
+                window.opener.postMessage({ type: 'media_selected', media }, '*');
                 window.close();
             } else if (window.parent !== window) {
-                window.parent.postMessage({ type: 'media-selected', media }, '*');
+                window.parent.postMessage({ type: 'media_selected', media }, '*');
             }
         },
 
@@ -206,7 +206,7 @@ function mediaLibrary(picker) {
             await fetch(`/admin/media-library/${item.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
-                body: JSON.stringify({ alt: item.attributes.alternativeText })
+                body: JSON.stringify({ alt: item.alt })
             });
         },
 

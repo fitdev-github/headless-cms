@@ -11,7 +11,19 @@
             <span class="text-sm text-gray-400">{{ $ct->display_name }}</span>
         @endif
         <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        <span class="text-sm text-gray-900 font-medium">{{ $entry ? 'Edit Entry #'.$entry->id : 'Create Entry' }}</span>
+        <span class="text-sm text-gray-900 font-medium">
+            @if($entry)
+                Edit Entry #{{ $entry->id }}
+                @if($ct->localized && $entry->locale)
+                    <span class="ml-2 px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700 rounded uppercase">{{ $entry->locale }}</span>
+                @endif
+            @else
+                Create Entry
+                @if($ct->localized && isset($targetLocale))
+                    <span class="ml-2 px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700 rounded uppercase">{{ $targetLocale }}</span>
+                @endif
+            @endif
+        </span>
     </div>
 
     @if($fields->isEmpty())
@@ -31,6 +43,12 @@
     <form method="POST" action="{{ $formAction }}" enctype="multipart/form-data" id="entry-form">
         @csrf
         @if($entry) @method('PUT') @endif
+
+        {{-- Hidden locale fields --}}
+        @if($ct->localized)
+        <input type="hidden" name="_locale" value="{{ $entry ? ($entry->locale ?? ($defaultLocale ?? 'en')) : ($targetLocale ?? ($defaultLocale ?? 'en')) }}">
+        <input type="hidden" name="_locale_group_id" value="{{ $entry ? ($entry->locale_group_id ?? '') : ($localeGroupId ?? '') }}">
+        @endif
 
         <div class="flex gap-6">
             {{-- Main fields --}}
@@ -92,15 +110,69 @@
                     @endif
 
                     @if($entry)
-                    <form method="POST" action="{{ route('admin.cm.destroy', [$ct->plural_name, $entry->id]) }}"
-                        onsubmit="return confirm('Delete this entry permanently?')" class="mt-2">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="w-full py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                            Delete entry
-                        </button>
-                    </form>
+                    <button type="submit" form="delete-entry-form"
+                        onclick="return confirm('Delete this entry permanently?')"
+                        class="w-full mt-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        Delete entry
+                    </button>
                     @endif
                 </div>
+
+                {{-- Locale panel (i18n) --}}
+                @if($ct->localized && $entry)
+                @php
+                    $entryLocale    = $entry->locale ?? ($defaultLocale ?? 'en');
+                    $allLocales     = $locales ?? [];
+                    $missingLocales = array_values(array_filter($allLocales, fn($l) => !isset($siblings[$l])));
+                    $linkedLocales  = array_values(array_filter($allLocales, fn($l) => isset($siblings[$l]) && $siblings[$l]->id !== $entry->id));
+                @endphp
+                <div class="bg-white border border-gray-100 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">🌐 Locale</p>
+
+                    {{-- Current locale badge --}}
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-2.5 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700 rounded uppercase">
+                            {{ $entryLocale }}
+                        </span>
+                        <span class="text-xs text-gray-400">current</span>
+                    </div>
+
+                    {{-- Translate to missing locales --}}
+                    @if(!empty($missingLocales))
+                    <div class="mb-3">
+                        <p class="text-xs text-gray-500 mb-1.5">Translate to:</p>
+                        <div class="space-y-1">
+                            @foreach($missingLocales as $loc)
+                            <form method="POST" action="{{ route('admin.cm.translate', [$ct->plural_name, $entry->id, $loc]) }}">
+                                @csrf
+                                <button type="submit"
+                                    class="w-full flex items-center gap-2 text-left text-xs px-2 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium">
+                                    <span class="px-1.5 py-0.5 bg-blue-100 rounded text-blue-700 uppercase">{{ $loc }}</span>
+                                    <span>+ Add translation</span>
+                                </button>
+                            </form>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Links to existing translations --}}
+                    @if(!empty($linkedLocales))
+                    <div class="{{ !empty($missingLocales) ? 'border-t border-gray-100 pt-3' : '' }}">
+                        <p class="text-xs text-gray-500 mb-1.5">Other translations:</p>
+                        <div class="space-y-1">
+                            @foreach($linkedLocales as $loc)
+                            <a href="{{ route('admin.cm.edit', [$ct->plural_name, $siblings[$loc]->id]) }}"
+                                class="flex items-center justify-between text-xs px-2 py-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                                <span class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-bold uppercase">{{ $loc }}</span>
+                                <span class="text-gray-400">Edit →</span>
+                            </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+                </div>
+                @endif
 
                 {{-- Password fields --}}
                 @foreach($fields->where('type', 'password') as $field)
@@ -119,6 +191,15 @@
             </div>
         </div>
     </form>
+
+    {{-- Delete form lives OUTSIDE the main form to avoid nested-form HTML bug --}}
+    @if($entry)
+    <form id="delete-entry-form" method="POST"
+        action="{{ route('admin.cm.destroy', [$ct->plural_name, $entry->id]) }}">
+        @csrf @method('DELETE')
+    </form>
+    @endif
+
     @endif
 </div>
 @endsection

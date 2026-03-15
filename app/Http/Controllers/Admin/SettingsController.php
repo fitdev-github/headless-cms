@@ -107,4 +107,55 @@ class SettingsController extends Controller
         $user->delete();
         return back()->with('success', 'User deleted.');
     }
+
+    // ─── i18n Locale Management ────────────────────────────────────────────────
+
+    public function addLocale(Request $request)
+    {
+        $request->validate(['locale' => ['required', 'string', 'regex:/^[a-z]{2,5}(-[a-z]{2,4})?$/i', 'max:10']]);
+
+        $locale  = strtolower(trim($request->locale));
+        $locales = json_decode(Setting::get('locales', '["en"]'), true) ?? ['en'];
+
+        if (!in_array($locale, $locales)) {
+            $locales[] = $locale;
+            Setting::set('locales', json_encode(array_values($locales)));
+        }
+
+        return back()->with('success', "Locale '{$locale}' added.");
+    }
+
+    public function removeLocale(Request $request)
+    {
+        $request->validate(['locale' => ['required', 'string']]);
+
+        $locale  = $request->locale;
+        $default = Setting::get('default_locale', 'en');
+
+        if ($locale === $default) {
+            return back()->with('error', 'Cannot remove the default locale. Set a new default first.');
+        }
+
+        $locales = json_decode(Setting::get('locales', '["en"]'), true) ?? ['en'];
+        $locales = array_values(array_filter($locales, fn ($l) => $l !== $locale));
+        Setting::set('locales', json_encode($locales));
+
+        return back()->with('success', "Locale '{$locale}' removed.");
+    }
+
+    public function setDefaultLocale(Request $request)
+    {
+        $request->validate(['locale' => ['required', 'string']]);
+
+        $locale  = $request->locale;
+        $locales = json_decode(Setting::get('locales', '["en"]'), true) ?? ['en'];
+
+        if (!in_array($locale, $locales)) {
+            return back()->with('error', "Locale '{$locale}' is not in the available locales list.");
+        }
+
+        Setting::set('default_locale', $locale);
+
+        return back()->with('success', "Default locale set to '{$locale}'.");
+    }
 }

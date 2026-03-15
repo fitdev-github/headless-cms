@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Setup;
 
 use App\Http\Controllers\Controller;
+use App\Models\ApiRole;
 use App\Services\SetupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -192,6 +193,17 @@ class SetupController extends Controller
         ]);
 
         $this->setup->saveSettings($data);
+
+        // Seed default API roles (idempotent)
+        ApiRole::firstOrCreate(
+            ['name' => 'Public'],
+            ['description' => 'Default role for unauthenticated users.', 'is_default' => true]
+        );
+        ApiRole::firstOrCreate(
+            ['name' => 'Authenticated'],
+            ['description' => 'Default role for registered API users.', 'is_default' => false]
+        );
+
         $request->session()->put('setup_step', 5);
 
         return redirect()->route('setup.complete');

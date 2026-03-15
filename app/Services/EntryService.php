@@ -66,6 +66,8 @@ class EntryService
             case 'media':
             case 'relation':
             case 'json':
+            case 'component':
+            case 'dynamiczone':
                 return $ev->value_json;
             case 'password':
                 return null;
@@ -89,6 +91,8 @@ class EntryService
                 break;
             case 'media':
             case 'json':
+            case 'component':
+            case 'dynamiczone':
                 $ev->value_json = is_string($value) ? json_decode($value, true) : $value;
                 break;
             case 'relation':
