@@ -35,11 +35,11 @@
 
 <div x-data="{
     testing: false,
+    saving: false,
     testStatus: null,
     testMessage: '',
-    async testConnection() {
-        this.testing = true;
-        this.testStatus = null;
+    saveError: '',
+    getParams() {
         const data = new FormData(document.getElementById('db-form'));
         const params = new URLSearchParams();
         params.append('_token', data.get('_token'));
@@ -48,11 +48,16 @@
         params.append('db_name', data.get('db_name'));
         params.append('db_user', data.get('db_user'));
         params.append('db_pass', data.get('db_pass'));
+        return params;
+    },
+    async testConnection() {
+        this.testing = true;
+        this.testStatus = null;
         try {
             const res = await fetch('{{ route('setup.database.test') }}', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: params.toString()
+                body: this.getParams().toString()
             });
             const json = await res.json();
             this.testStatus = json.ok ? 'success' : 'error';
@@ -62,10 +67,34 @@
             this.testMessage = 'Request failed.';
         }
         this.testing = false;
+    },
+    async saveDatabase() {
+        this.saving = true;
+        this.saveError = '';
+        try {
+            const res = await fetch('{{ route('setup.database.save') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: this.getParams().toString()
+            });
+            const json = await res.json();
+            if (json.ok) {
+                window.location.href = json.redirect;
+            } else {
+                this.saveError = json.message || 'Something went wrong.';
+                this.saving = false;
+            }
+        } catch(e) {
+            this.saveError = 'Request failed. Please try again.';
+            this.saving = false;
+        }
     }
 }">
 
-<form id="db-form" method="POST" action="{{ route('setup.database.save') }}">
+<form id="db-form" @submit.prevent>
     @csrf
 
     <div class="grid grid-cols-3 gap-3 mb-3">
@@ -98,6 +127,7 @@
         <input type="password" name="db_pass" value="{{ old('db_pass') }}"
             class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
     </div>
+</form>
 
     {{-- Test connection result --}}
     <div x-show="testStatus === 'success'" class="p-2.5 bg-green-50 border border-green-200 rounded-lg mb-3 text-sm text-green-700 flex items-center gap-2">
@@ -113,19 +143,28 @@
         <span x-text="testMessage"></span>
     </div>
 
+    {{-- Save error --}}
+    <div x-show="saveError" class="p-2.5 bg-red-50 border border-red-200 rounded-lg mb-3 text-sm text-red-700 flex items-center gap-2">
+        <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        <span x-text="saveError"></span>
+    </div>
+
     <div class="flex gap-2">
         <button type="button" @click="testConnection()"
-            :disabled="testing"
+            :disabled="testing || saving"
             class="flex-1 py-2.5 px-4 text-sm font-medium border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50">
             <span x-show="!testing">Test Connection</span>
             <span x-show="testing">Testing…</span>
         </button>
-        <button type="submit"
-            class="flex-1 py-2.5 px-4 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-            Save &amp; Continue →
+        <button type="button" @click="saveDatabase()"
+            :disabled="saving || testing"
+            class="flex-1 py-2.5 px-4 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait">
+            <span x-show="!saving">Save &amp; Continue →</span>
+            <span x-show="saving">Setting up database… Please wait</span>
         </button>
     </div>
-</form>
 </div>
 @endif
 @endsection

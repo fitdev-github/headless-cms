@@ -75,9 +75,14 @@ class SetupController extends Controller
         $username = trim($request->input('db_user'));
         $password = $request->input('db_pass', '');
 
+        $isAjax = $request->ajax() || $request->wantsJson();
+
         // Test connection
         $test = $this->setup->testConnection(compact('host', 'port', 'database', 'username', 'password'));
         if (!$test['ok']) {
+            if ($isAjax) {
+                return response()->json(['ok' => false, 'message' => 'Connection failed: ' . $test['message']]);
+            }
             return back()->withErrors(['db' => 'Connection failed: ' . $test['message']])->withInput();
         }
 
@@ -100,6 +105,9 @@ class SetupController extends Controller
             // .env not writable — show content for manual copy
             $envContent = $this->setup->generateEnvContent($envData);
             $request->session()->put('setup_env_content', $envContent);
+            if ($isAjax) {
+                return response()->json(['ok' => true, 'redirect' => route('setup.account')]);
+            }
             return redirect()->route('setup.account');
         }
 
@@ -114,6 +122,9 @@ class SetupController extends Controller
 
         // Run migrations
         if (!$this->setup->runMigrations()) {
+            if ($isAjax) {
+                return response()->json(['ok' => false, 'message' => 'Migrations failed. Please check your credentials and try again.']);
+            }
             return back()->withErrors(['db' => 'Migrations failed. Please check your credentials and try again.'])->withInput();
         }
 
@@ -121,6 +132,9 @@ class SetupController extends Controller
         // to .env, which would invalidate the session and redirect back to step 1.
         // The key is already preserved inside generateEnvContent().
 
+        if ($isAjax) {
+            return response()->json(['ok' => true, 'redirect' => route('setup.account')]);
+        }
         return redirect()->route('setup.account');
     }
 
