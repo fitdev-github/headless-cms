@@ -170,10 +170,8 @@ HTML;
 
     private function media(string $name, string $id, $value, Field $field): string
     {
-        $json   = e(json_encode($value));
-        $fid    = $field->id;
-        $thumb  = ($value && isset($value['url'])) ? $value['url'] : '';
-        $fname  = ($value && isset($value['name'])) ? e($value['name']) : '';
+        $json = e(json_encode($value));
+        $fid  = $field->id;
         return <<<HTML
 <div x-data="mediaField{$fid}()" class="space-y-2">
     <input type="hidden" name="{$name}" id="{$id}" :value="JSON.stringify(sel)" x-ref="hidden">
@@ -189,18 +187,38 @@ HTML;
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         Choose from Media Library
     </button>
+
+    <!-- Media picker modal -->
+    <div x-show="modalOpen" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        @keydown.escape.window="modalOpen = false">
+        <div class="absolute inset-0 bg-black/50" @click="modalOpen = false"></div>
+        <div class="relative bg-white rounded-xl shadow-2xl flex flex-col"
+            style="width:min(920px,95vw);height:min(640px,90vh)">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                <h3 class="text-sm font-semibold text-gray-900">Media Library</h3>
+                <button type="button" @click="modalOpen = false"
+                    class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <iframe :src="modalOpen ? '/admin/media-library?picker=1' : ''"
+                class="flex-1 w-full rounded-b-xl" frameborder="0"></iframe>
+        </div>
+    </div>
 </div>
 <script>
 function mediaField{$fid}() {
     return {
         sel: {$json},
+        modalOpen: false,
         pick() {
-            const w = window.open('/admin/media-library?picker=1', 'mediapicker_{$fid}', 'width=900,height=620');
+            this.modalOpen = true;
             const handler = (e) => {
                 if (e.data?.type === 'media_selected') {
                     this.sel = e.data.media;
+                    this.modalOpen = false;
                     window.removeEventListener('message', handler);
-                    w.close();
                 }
             };
             window.addEventListener('message', handler);
