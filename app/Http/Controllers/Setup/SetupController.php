@@ -117,10 +117,9 @@ class SetupController extends Controller
             return back()->withErrors(['db' => 'Migrations failed. Please check your credentials and try again.'])->withInput();
         }
 
-        // Generate app key if missing
-        if (!config('app.key')) {
-            $this->setup->generateAppKey();
-        }
+        // Do NOT call generateAppKey() here — it writes yet another new APP_KEY
+        // to .env, which would invalidate the session and redirect back to step 1.
+        // The key is already preserved inside generateEnvContent().
 
         return redirect()->route('setup.account');
     }
@@ -144,7 +143,14 @@ class SetupController extends Controller
             'password'              => 'required|string|min:8|confirmed',
         ]);
 
-        $user = $this->setup->createAdmin($data);
+        try {
+            $user = $this->setup->createAdmin($data);
+        } catch (\Throwable $e) {
+            return back()
+                ->withErrors(['account' => 'Could not create admin account: ' . $e->getMessage()])
+                ->withInput();
+        }
+
         $request->session()->put('setup_step', 4);
         $request->session()->put('setup_admin_id', $user->id);
 

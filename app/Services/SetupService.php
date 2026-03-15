@@ -58,14 +58,41 @@ class SetupService
 
     public function generateEnvContent(array $data): string
     {
-        $appUrl = rtrim($data['app_url'] ?? 'http://localhost', '/');
-        $appKey = 'base64:' . base64_encode(random_bytes(32));
+        $appUrl  = rtrim($data['app_url'] ?? 'http://localhost', '/');
+
+        // ── FIX 1: Read APP_KEY directly from the .env file on disk ─────────────
+        // Do NOT use config('app.key') here — it may be stale or empty, which
+        // would cause a brand-new random key to be written, invalidating the
+        // browser's session cookie and redirecting the user back to step 1.
+        $appKey     = '';
+        $envPath    = base_path('.env');
+        $envOnDisk  = file_exists($envPath) ? file_get_contents($envPath) : '';
+
+        if ($envOnDisk && preg_match('/^APP_KEY=(.+)$/m', $envOnDisk, $m)) {
+            $appKey = trim($m[1]);
+        }
+        if (empty($appKey)) {
+            // Fresh install: generate once and keep it
+            $appKey = 'base64:' . base64_encode(random_bytes(32));
+        }
+
+        // ── FIX 2: Preserve APP_DEBUG so local dev keeps debug=true ─────────────
+        $appDebug = 'false';
+        if ($envOnDisk && preg_match('/^APP_DEBUG=(.+)$/m', $envOnDisk, $d)) {
+            $appDebug = (strtolower(trim($d[1])) === 'true') ? 'true' : 'false';
+        }
+
+        $dbHost = $data['db_host']     ?? '127.0.0.1';
+        $dbPort = $data['db_port']     ?? '3306';
+        $dbName = $data['db_database'] ?? '';
+        $dbUser = $data['db_username'] ?? '';
+        $dbPass = $data['db_password'] ?? '';
 
         return <<<ENV
 APP_NAME="HeadlessCMS"
 APP_ENV=production
 APP_KEY={$appKey}
-APP_DEBUG=false
+APP_DEBUG={$appDebug}
 APP_URL={$appUrl}
 
 LOG_CHANNEL=daily
@@ -73,11 +100,11 @@ LOG_LEVEL=error
 LOG_DAYS=14
 
 DB_CONNECTION=mysql
-DB_HOST={$data['db_host']}
-DB_PORT={$data['db_port']}
-DB_DATABASE={$data['db_database']}
-DB_USERNAME={$data['db_username']}
-DB_PASSWORD={$data['db_password']}
+DB_HOST={$dbHost}
+DB_PORT={$dbPort}
+DB_DATABASE={$dbName}
+DB_USERNAME={$dbUser}
+DB_PASSWORD={$dbPass}
 
 BROADCAST_DRIVER=log
 CACHE_DRIVER=file
@@ -105,14 +132,49 @@ ENV;
             return false;
         }
 
-        file_put_contents($envPath, $content);
-        return true;
+        $result = file_put_contents($envPath, $content);
+        return $result !== false;
     }
 
     public function runMigrations(): bool
     {
         try {
             Artisan::call('migrate', ['--force' => true]);
+            return true;
+        } catch (\Throwable $e) {
+            // "Table already exists" (SQLSTATE 42S01) means a previous wizard
+            // run created the tables but the migration records were lost.
+            // Stamp all un-recorded migrations as complete so the app works.
+            if (str_contains($e->getMessage(), 'already exists')
+                || str_contains($e->getMessage(), '42S01')) {
+                return $this->stampMissingMigrations();
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Insert migration records for every .php file under database/migrations
+     * that is not already recorded in the migrations table.
+     * Used to recover from "table already exists" situations.
+     */
+    private function stampMissingMigrations(): bool
+    {
+        try {
+            $recorded = \Illuminate\Support\Facades\DB::table('migrations')
+                ->pluck('migration')
+                ->toArray();
+
+            $batch = (int) \Illuminate\Support\Facades\DB::table('migrations')
+                ->max('batch') + 1;
+
+            foreach (glob(database_path('migrations/*.php')) as $file) {
+                $name = pathinfo($file, PATHINFO_FILENAME);
+                if (!in_array($name, $recorded)) {
+                    \Illuminate\Support\Facades\DB::table('migrations')
+                        ->insert(['migration' => $name, 'batch' => $batch]);
+                }
+            }
             return true;
         } catch (\Throwable $e) {
             return false;
@@ -126,13 +188,32 @@ ENV;
 
     public function createAdmin(array $data): User
     {
-        return User::create([
-            'name'      => $data['name'],
-            'email'     => $data['email'],
-            'password'  => Hash::make($data['password']),
-            'role'      => 'superadmin',
-            'is_active' => true,
-        ]);
+        // ── FIX 3: firstOrCreate with password in the create-attributes ──────────
+        // Using User::create() crashes with a duplicate-key error when the wizard
+        // is re-run on an existing database.
+        // Password MUST be in the create-attributes because the column has no
+        // DEFAULT value — omitting it causes "Field 'password' doesn't have a
+        // default value" on INSERT.
+        $hashed = Hash::make($data['password']);
+
+        $user = User::firstOrCreate(
+            ['email' => $data['email']],
+            [
+                'name'      => $data['name'],
+                'password'  => $hashed,
+                'role'      => 'superadmin',
+                'is_active' => true,
+            ]
+        );
+
+        // If the record already existed (re-run), update name + password too.
+        if (!$user->wasRecentlyCreated) {
+            $user->name     = $data['name'];
+            $user->password = $hashed;
+            $user->save();
+        }
+
+        return $user;
     }
 
     public function saveSettings(array $data): void
